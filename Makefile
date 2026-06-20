@@ -71,6 +71,14 @@ trino-cli: ## Open a Trino SQL shell
 smoke: ## Run smoke tests against the running stack
 	python3 tests/integration/smoke_test.py
 
+.PHONY: contracts
+contracts: ## Validate generator events against the JSON data contracts
+	pip install -q -r tests/contracts/requirements.txt && python3 tests/contracts/validate_contracts.py
+
+.PHONY: dq
+dq: ## Run dbt data-quality tests + source freshness (needs dbt-trino)
+	cd transformations/dbt && DBT_PROFILES_DIR=. dbt deps && DBT_PROFILES_DIR=. dbt test && DBT_PROFILES_DIR=. dbt source freshness
+
 .PHONY: chaos
 chaos: ## Run chaos experiments (kill broker / taskmanager / minio)
 	./tests/chaos/run_chaos.sh

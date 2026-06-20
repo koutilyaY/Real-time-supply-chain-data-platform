@@ -27,13 +27,52 @@ import time
 from datetime import datetime, timezone
 
 from confluent_kafka import Producer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer
+from confluent_kafka.serialization import MessageField, SerializationContext
 
 BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "kafka:9092")
+SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL", "http://apicurio:8080/apis/ccompat/v7")
 EPS = float(os.getenv("GEN_EVENTS_PER_SEC", "20"))
 SEED = int(os.getenv("GEN_SEED", "42"))
 BAD_RATE = float(os.getenv("GEN_BAD_RATE", "0.03"))
 
 random.seed(SEED)
+
+
+def _avro(name, namespace, fields):
+    """Build an Avro record schema where every field is nullable (so malformed
+    records still serialize and reach the Flink DLQ) but types are enforced."""
+    return json.dumps({
+        "type": "record", "name": name, "namespace": namespace,
+        "fields": [{"name": f, "type": ["null", t], "default": None} for f, t in fields],
+    })
+
+
+# Avro value schemas per topic (subject <topic>-value, Confluent wire format).
+SCHEMAS = {
+    "orders": _avro("OrderEvent", "scp.orders", [
+        ("event_id", "string"), ("order_id", "string"), ("customer_id", "string"),
+        ("sku", "string"), ("quantity", "int"), ("unit_price", "double"),
+        ("currency", "string"), ("status", "string"), ("region", "string"),
+        ("order_ts", "string")]),
+    "inventory": _avro("InventoryEvent", "scp.inventory", [
+        ("event_id", "string"), ("warehouse_id", "string"), ("sku", "string"),
+        ("on_hand", "int"), ("reserved", "int"), ("reorder_point", "int"),
+        ("region", "string"), ("inventory_ts", "string")]),
+    "shipments": _avro("ShipmentEvent", "scp.shipments", [
+        ("event_id", "string"), ("shipment_id", "string"), ("order_id", "string"),
+        ("carrier", "string"), ("origin", "string"), ("destination", "string"),
+        ("status", "string"), ("ship_ts", "string"), ("eta_ts", "string")]),
+    "suppliers": _avro("SupplierEvent", "scp.suppliers", [
+        ("event_id", "string"), ("supplier_id", "string"), ("name", "string"),
+        ("country", "string"), ("lead_time_days", "int"), ("on_time_rate", "double"),
+        ("risk_score", "double"), ("updated_ts", "string")]),
+    "iot.sensors": _avro("IoTSensorReading", "scp.iot", [
+        ("event_id", "string"), ("sensor_id", "string"), ("asset_id", "string"),
+        ("warehouse_id", "string"), ("metric", "string"), ("value", "double"),
+        ("unit", "string"), ("reading_ts", "string")]),
+}
 
 REGIONS = ["NA", "EU", "APAC", "LATAM"]
 CARRIERS = ["DHL", "FedEx", "UPS", "Maersk", "DBSchenker"]
@@ -199,12 +238,21 @@ def main() -> int:
         }
     )
 
+    # Avro serializers (one per topic) registering schemas in Apicurio (ccompat).
+    sr = SchemaRegistryClient({"url": SCHEMA_REGISTRY_URL})
+    serializers = {
+        topic: AvroSerializer(sr, schema_str, to_dict=lambda obj, ctx: obj)
+        for topic, schema_str in SCHEMAS.items()
+    }
+
     interval = 1.0 / EPS if EPS > 0 else 0.05
     n = 0
-    print(f"[generator] -> {BOOTSTRAP} at {EPS} evt/s (bad_rate={BAD_RATE})", flush=True)
+    print(f"[generator] -> {BOOTSTRAP} (Avro via {SCHEMA_REGISTRY_URL}) "
+          f"at {EPS} evt/s (bad_rate={BAD_RATE})", flush=True)
     while _running:
         topic, key, value = random.choice(GENERATORS)()
-        producer.produce(topic, key=str(key).encode(), value=json.dumps(value).encode())
+        payload = serializers[topic](value, SerializationContext(topic, MessageField.VALUE))
+        producer.produce(topic, key=str(key).encode(), value=payload)
         n += 1
         if n % 200 == 0:
             producer.poll(0)

@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: stg_orders_revenue
+    description: "Deduped 1-min revenue windows (one row per region+window_start)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [region, window_start]
+    columns:
+      - name: region
+        tests: [not_null]
+      - name: window_start
+        tests: [not_null]
+      - name: gross_revenue
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "gross_revenue is not null"
+
+  - name: stg_shipment_delays
+    description: "Deduped 5-min shipment-delay windows (one row per carrier+window_start)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [carrier, window_start]
+    columns:
+      - name: delay_rate
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1
+
+  - name: stg_iot_metrics
+    description: "Deduped 1-min IoT metric windows (one row per warehouse+metric+window_start)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [warehouse_id, metric, window_start]
+    columns:
+      - name: metric
+        tests:
+          - accepted_values:
+              values: ["temperature", "humidity", "vibration"]
+
+  - name: stg_inventory_alerts
+    description: "Low-stock alerts (event log; not deduped)."
+    columns:
+      - name: sku
+        tests: [not_null]
+      - name: shortfall
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1

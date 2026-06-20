@@ -6,7 +6,7 @@ Maps the guide's phases/instructions to what exists in this repo.
 |---|---|---|---|
 | 1 | Summarize spec | ✅ | top of `README.md` |
 | 2 | Repo + Docker Compose (MinIO, Kafka, Flink, Trino, Dagster, Superset, Prom/Grafana, MLflow, Qdrant, …) | ✅ slice + profiles | `docker-compose.yml` |
-| 3 | Ingestion (Airbyte/Debezium → Kafka, schemas/contracts) | ✅ synthetic generator + JSON contracts; **Debezium CDC** (erp-db → Kafka, verified); 🟡 Airbyte documented | `ingestion/` |
+| 3 | Ingestion (Airbyte/Debezium → Kafka, schemas/contracts) | ✅ Avro generator + **Apicurio schema registry**; **Debezium CDC** (verified); JSON contracts in CI; 🟡 Airbyte documented | `ingestion/` |
 | 4 | Flink streaming (windows, joins, curated → Iceberg) | ✅ 4 domains, windows + DLQ | `infra/flink/sql/` |
 | 5 | Iceberg Bronze/Silver/Gold + dbt models | ✅ | `lakehouse/`, `transformations/dbt/` |
 | 6 | Dagster orchestration + CI/CD | ✅ assets + schedule; GitHub Actions | `orchestration/`, `.github/` |
@@ -22,6 +22,12 @@ Maps the guide's phases/instructions to what exists in this repo.
 | 16 | Documentation | ✅ | `README.md`, `docs/` |
 
 Legend: ✅ implemented & runnable · 🟡 partial/scaffolded with a clear next step.
+
+## Tier-1 correctness (added 2026-06-19)
+- **Silver dedup** — staging models keep one row per window grain (proven by `dbt_utils.unique_combination_of_columns` tests); at-least-once stream replay no longer double-counts Gold.
+- **Richer DQ** — `dbt-expectations` ranges, `accepted_values`, grain-uniqueness on marts, and **source freshness** SLAs. dbt build now PASS=33.
+- **Contract enforcement** — `tests/contracts/validate_contracts.py` verifies clean events conform and malformed events are rejected; wired into CI (`contracts` job) + `make contracts`.
+- **Schema Registry + Avro** — DONE: Apicurio registry (Confluent-compat), generator produces Avro (schemas auto-registered as `<topic>-value`), all 4 Flink sources use `avro-confluent`. Types enforced at the wire; nullable schemas keep the DLQ for business rules. Verified: Bronze/Silver flow on Avro, dbt PASS=33, DLQ intact.
 
 ## Suggested next passes
 1. **Connectors:** stand up Airbyte OSS + a Debezium Postgres source writing to

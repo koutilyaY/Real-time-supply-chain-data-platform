@@ -20,8 +20,8 @@ CREATE TABLE kafka_orders (
   'properties.bootstrap.servers' = 'kafka:9092',
   'properties.group.id' = 'flink-orders',
   'scan.startup.mode' = 'earliest-offset',
-  'format' = 'json',
-  'json.ignore-parse-errors' = 'true'
+  'format' = 'avro-confluent',
+  'avro-confluent.url' = 'http://apicurio:8080/apis/ccompat/v7'
 );
 
 CREATE TABLE kafka_orders_dlq (

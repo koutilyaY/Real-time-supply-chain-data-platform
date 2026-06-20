@@ -7,15 +7,35 @@ sources:
     description: "Curated streaming outputs written by Flink SQL jobs."
     tables:
       - name: orders_revenue_1m
+        loaded_at_field: window_end
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 60, period: minute}
       - name: inventory_alerts
+        loaded_at_field: detected_ts
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 60, period: minute}
       - name: shipment_delays_5m
+        loaded_at_field: window_end
+        freshness:
+          warn_after: {count: 20, period: minute}
+          error_after: {count: 90, period: minute}
       - name: iot_metric_1m
+        loaded_at_field: window_end
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 60, period: minute}
   - name: bronze
     database: iceberg
     schema: bronze
     description: "Validated raw landing tables written by Flink SQL jobs."
     tables:
       - name: orders_raw
+        loaded_at_field: ingest_ts
+        freshness:
+          warn_after: {count: 10, period: minute}
+          error_after: {count: 45, period: minute}
       - name: inventory_raw
       - name: shipments_raw
       - name: iot_raw

@@ -18,8 +18,8 @@ CREATE TABLE kafka_shipments (
   'properties.bootstrap.servers' = 'kafka:9092',
   'properties.group.id' = 'flink-shipments',
   'scan.startup.mode' = 'earliest-offset',
-  'format' = 'json',
-  'json.ignore-parse-errors' = 'true'
+  'format' = 'avro-confluent',
+  'avro-confluent.url' = 'http://apicurio:8080/apis/ccompat/v7'
 );
 
 CREATE TABLE IF NOT EXISTS iceberg.bronze.shipments_raw (

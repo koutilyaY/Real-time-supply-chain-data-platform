@@ -116,6 +116,21 @@ services:
     networks: [platform]
 
   # ---------------------------------------------------------------------------
+  # Schema Registry (Apicurio, Confluent-compatible API at /apis/ccompat/v7)
+  # ---------------------------------------------------------------------------
+  apicurio:
+    image: apicurio/apicurio-registry-mem:2.6.13.Final
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/apis/ccompat/v7/subjects || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [platform]
+
+  # ---------------------------------------------------------------------------
   # Flink (custom image with Iceberg + Kafka connectors) - stream processing
   # ---------------------------------------------------------------------------
   flink-jobmanager:
@@ -184,8 +199,11 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      apicurio:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP: kafka:9092
+      SCHEMA_REGISTRY_URL: http://apicurio:8080/apis/ccompat/v7
       GEN_EVENTS_PER_SEC: ${GEN_EVENTS_PER_SEC:-20}
       GEN_SEED: ${GEN_SEED:-42}
     networks: [platform]

@@ -3,6 +3,9 @@ version: 2
 models:
   - name: fct_revenue_hourly
     description: "Hourly gross revenue and order counts by region."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [region, revenue_hour]
     columns:
       - name: region
         tests: [not_null]
@@ -17,6 +20,9 @@ models:
 
   - name: agg_inventory_health
     description: "SKUs below reorder point and total shortfall by warehouse."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [warehouse_id, region]
     columns:
       - name: warehouse_id
         tests: [not_null]
@@ -37,6 +43,9 @@ models:
 
   - name: fct_iot_hourly
     description: "Hourly IoT metric rollup per warehouse + metric."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [warehouse_id, metric, reading_hour]
     columns:
       - name: warehouse_id
         tests: [not_null]

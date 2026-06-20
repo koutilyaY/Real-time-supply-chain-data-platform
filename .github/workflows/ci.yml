@@ -30,6 +30,18 @@ jobs:
             python -c "import json,sys; json.load(open('$f'))"
           done
 
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Enforce data contracts
+        run: |
+          pip install -r tests/contracts/requirements.txt
+          python tests/contracts/validate_contracts.py
+
   dbt-parse:
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +49,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: dbt parse (no warehouse)
+      - name: dbt deps + parse (no warehouse)
         run: |
           pip install dbt-trino==1.8.1
           cd transformations/dbt
