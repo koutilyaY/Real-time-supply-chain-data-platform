@@ -52,7 +52,9 @@ services:
       mc mb -p local/${WAREHOUSE_BUCKET:-warehouse} &&
       mc mb -p local/mlflow &&
       mc anonymous set none local/${WAREHOUSE_BUCKET:-warehouse} &&
-      echo 'buckets ready';
+      mc version enable local/${WAREHOUSE_BUCKET:-warehouse} &&
+      mc version enable local/mlflow &&
+      echo 'buckets ready (versioning enabled)';
       "
     networks: [platform]
 

@@ -31,3 +31,6 @@ volumes/
 # local agent settings
 .claude/settings.local.json
 .claude/
+
+# database backups
+backups/

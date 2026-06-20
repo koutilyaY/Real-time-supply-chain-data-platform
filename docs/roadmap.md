@@ -31,7 +31,9 @@ Legend: ✅ implemented & runnable · 🟡 partial/scaffolded with a clear next 
 
 ## Tier-2 lakehouse hygiene (added 2026-06-19)
 - **Iceberg maintenance** — DONE: `scripts/iceberg_maintain.sh` + Dagster `iceberg_maintenance` asset (daily 03:30) run `optimize` (compaction), `expire_snapshots`, `remove_orphan_files` over all Bronze/Silver tables. Verified: silver 62→1 files, bronze 344→5 files, snapshots 368→11; data integrity preserved. Prod-safe 7d retention (job lowers per-session only).
-- **Still open (Tier-2):** table partitioning + sort order; Flink HA + savepoints; Kafka RF≥2 + named volume; scheduled `pg_dump` + MinIO versioning backups.
+- **Partitioning** — DONE: `scripts/apply_partitioning.sh` (+ `make partition`) day-partitions every Bronze/Silver table on its event-time column via Iceberg partition evolution. Verified: new writes land in `*_day=YYYY-MM-DD` partitions (old data keeps its layout). Flink honors the spec after a restart.
+- **Backups** — DONE: `scripts/backup_postgres.sh` (+ `make backup`) gzips `pg_dumpall` of catalog + all metadata DBs (7-backup retention); MinIO **bucket versioning** enabled on warehouse + mlflow (protects against overwrite/delete).
+- **Still open (Tier-2):** Flink HA + savepoints and Kafka RF≥2 — both need multi-node setups (ZK/K8s, multiple brokers) that don't fit single-node local compose; document for cloud deploy.
 
 ## Suggested next passes
 1. **Connectors:** stand up Airbyte OSS + a Debezium Postgres source writing to

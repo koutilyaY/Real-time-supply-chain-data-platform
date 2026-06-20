@@ -59,6 +59,14 @@ dbt-run: ## Run dbt transformations (needs `pip install dbt-trino` on host)
 maintain: ## Iceberg maintenance: compact + expire snapshots + remove orphans (arg: RETENTION=7d)
 	./scripts/iceberg_maintain.sh $(or $(RETENTION),7d)
 
+.PHONY: partition
+partition: ## Apply Iceberg day-partitioning (run flink-jobs after to honor the spec)
+	./scripts/apply_partitioning.sh
+
+.PHONY: backup
+backup: ## Back up all Postgres databases (catalog + metadata) to ./backups
+	./scripts/backup_postgres.sh
+
 .PHONY: demo
 demo: ## End-to-end: up -> lake-init -> flink-jobs (waits between steps)
 	$(MAKE) up
