@@ -6,15 +6,43 @@ All query endpoints degrade gracefully: if a table doesn't exist yet (e.g. the
 streaming jobs haven't produced data), they return an empty result plus a `note`
 rather than a 500, so the API is usable the moment the stack is up.
 """
+import os
 import time
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from .db import query_safe
 
+API_KEY = os.getenv("API_KEY", "dev-secret-key")
+RATE_LIMIT = os.getenv("API_RATE_LIMIT", "120/minute")
+# Paths reachable without an API key (probes, scraping, docs).
+OPEN_PATHS = {"/health", "/metrics", "/docs", "/openapi.json", "/redoc"}
+
 app = FastAPI(title="Real-Time Supply-Chain Platform API", version="0.1.0")
+
+# --- Rate limiting (per client IP) ---
+limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT])
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: JSONResponse(status_code=429, content={"detail": "rate limit exceeded"}),
+)
+app.add_middleware(SlowAPIMiddleware)
+
+
+# --- API-key auth (everything except OPEN_PATHS) ---
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    if request.url.path not in OPEN_PATHS and request.headers.get("x-api-key") != API_KEY:
+        return JSONResponse(status_code=401, content={"detail": "missing or invalid X-API-Key"})
+    return await call_next(request)
+
 
 REQ = Counter("api_requests_total", "API requests", ["endpoint", "status"])
 LAT = Histogram("api_request_seconds", "API latency", ["endpoint"])

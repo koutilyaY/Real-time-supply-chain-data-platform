@@ -9,7 +9,7 @@ Maps the guide's phases/instructions to what exists in this repo.
 | 3 | Ingestion (Airbyte/Debezium → Kafka, schemas/contracts) | ✅ Avro generator + **Apicurio schema registry**; **Debezium CDC** (verified); JSON contracts in CI; 🟡 Airbyte documented | `ingestion/` |
 | 4 | Flink streaming (windows, joins, curated → Iceberg) | ✅ 4 domains, windows + DLQ | `infra/flink/sql/` |
 | 5 | Iceberg Bronze/Silver/Gold + dbt models | ✅ | `lakehouse/`, `transformations/dbt/` |
-| 6 | Dagster orchestration + CI/CD | ✅ assets + schedule; GitHub Actions | `orchestration/`, `.github/` |
+| 6 | Dagster orchestration + CI/CD | ✅ **dagster-dbt per-model assets + lineage**, dq + maintenance assets, schedules; GitHub Actions | `orchestration/`, `.github/` |
 | 7 | DataHub + knowledge graph | 🟡 documented (own stack); dbt lineage available | `docs/architecture.md` |
 | 8 | ML: forecasting, anomaly, supplier risk + MLflow | ✅ runnable scripts + MLflow server | `ml/` |
 | 9 | RAG (sentence-transformers + Qdrant + Ollama) | ✅ ingest + ask API | `rag/` |
@@ -17,7 +17,7 @@ Maps the guide's phases/instructions to what exists in this repo.
 | 11 | FastAPI endpoints | ✅ inventory/shipments/forecasts/carriers/iot/chat | `serving/api/` |
 | 12 | Superset dashboards | ✅ service up, Trino "Lakehouse" auto-registered (build charts in UI) | `infra/superset/` |
 | 13 | Observability (Prom/Grafana/Loki) | ✅ Prometheus (api+minio+flink targets all up) + Grafana; 🟡 Loki documented | `infra/prometheus`, `infra/grafana` |
-| 14 | Security/governance (RBAC, masking, audit) | 🟡 policies + masking macros; enforcement points noted | `governance/` |
+| 14 | Security/governance (RBAC, masking, audit) | ✅ API key auth + rate limiting, **PII masking applied** (fct_orders_secure); 🟡 Trino RBAC + secrets manager noted | `governance/`, `serving/api/` |
 | 15 | Chaos engineering + DLQ/retries | ✅ run + verified; recovery confirmed, gap found & fixed (restart policies) | `tests/chaos/`, `tests/chaos/FINDINGS.md` |
 | 16 | Documentation | ✅ | `README.md`, `docs/` |
 
@@ -34,6 +34,13 @@ Legend: ✅ implemented & runnable · 🟡 partial/scaffolded with a clear next 
 - **Partitioning** — DONE: `scripts/apply_partitioning.sh` (+ `make partition`) day-partitions every Bronze/Silver table on its event-time column via Iceberg partition evolution. Verified: new writes land in `*_day=YYYY-MM-DD` partitions (old data keeps its layout). Flink honors the spec after a restart.
 - **Backups** — DONE: `scripts/backup_postgres.sh` (+ `make backup`) gzips `pg_dumpall` of catalog + all metadata DBs (7-backup retention); MinIO **bucket versioning** enabled on warehouse + mlflow (protects against overwrite/delete).
 - **Still open (Tier-2):** Flink HA + savepoints and Kafka RF≥2 — both need multi-node setups (ZK/K8s, multiple brokers) that don't fit single-node local compose; document for cloud deploy.
+
+## Tier-3 ops & security (added 2026-06-19)
+- **dagster-dbt integration** — DONE: `@dbt_assets` exposes one Dagster asset **per dbt model** with lineage (sources → stg_* → gold.*); replaces the opaque subprocess `build_marts`. Materializes via `DbtCliResource`. (Run dbt through Dagster now, not throwaway containers, to avoid `package-lock.yml` version skew.)
+- **API auth + rate limiting** — DONE: `X-API-Key` gate (health/metrics/docs open) + per-IP rate limit (slowapi). Verified 401/200/429.
+- **PII masking applied** — DONE: `fct_orders_secure` exposes `customer_id` as sha256 (mask_hash macro); regex test enforces it. Raw IDs never surfaced.
+- **Prometheus alerting** — DONE: alert rules (target down, API error rate, p95 latency, Flink down) in `infra/prometheus/alerts.yml`, loaded by Prometheus. (Alertmanager routing to Slack = next.)
+- **Still open (Tier-3):** Loki/Promtail logs; DataHub catalog; ML registry promotion + drift; Trino file-based RBAC; secrets manager (Vault/SOPS).
 
 ## Suggested next passes
 1. **Connectors:** stand up Airbyte OSS + a Debezium Postgres source writing to

@@ -3,3 +3,4 @@ uvicorn[standard]==0.30.6
 trino==0.329.0
 prometheus-client==0.20.0
 pydantic==2.9.2
+slowapi==0.1.9

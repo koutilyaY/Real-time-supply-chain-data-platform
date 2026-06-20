@@ -41,6 +41,16 @@ models:
               max_value: 1
               inclusive: true
 
+  - name: fct_orders_secure
+    description: "Order facts with customer_id masked (sha256) per governance policy."
+    columns:
+      - name: customer_id_hash
+        description: "Pseudonymous customer key; raw customer_id never exposed."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              regex: "^[0-9a-f]{64}$"
+
   - name: fct_iot_hourly
     description: "Hourly IoT metric rollup per warehouse + metric."
     tests:

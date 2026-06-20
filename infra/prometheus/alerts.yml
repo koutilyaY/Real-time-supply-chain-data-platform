@@ -1,0 +1,33 @@
+groups:
+  - name: platform-alerts
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Scrape target down: {{ $labels.job }} ({{ $labels.instance }})"
+
+      - alert: ApiHighErrorRate
+        expr: |
+          sum(rate(api_requests_total{status="error"}[5m]))
+            / clamp_min(sum(rate(api_requests_total[5m])), 1) > 0.2
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "API error ratio >20% over 5m"
+
+      - alert: ApiHighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(api_request_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "API p95 latency >2s over 5m"
+
+      - alert: FlinkJobManagerDown
+        expr: up{job="flink"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Flink node not reporting metrics: {{ $labels.instance }}"

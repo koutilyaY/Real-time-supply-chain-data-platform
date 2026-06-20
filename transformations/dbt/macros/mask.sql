@@ -4,7 +4,7 @@
 
 {% macro mask_hash(column, salt=none) -%}
     {%- set s = salt if salt is not none else var('mask_salt', 'dev-salt') -%}
-    to_hex(sha256(to_utf8(concat(cast({{ column }} as varchar), '{{ s }}'))))
+    lower(to_hex(sha256(to_utf8(concat(cast({{ column }} as varchar), '{{ s }}')))))
 {%- endmacro %}
 
 {% macro mask_redact(column) -%}

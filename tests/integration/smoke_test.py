@@ -11,6 +11,7 @@ Run after `make demo` and a minute of warm-up:
 Exit code 0 = all critical checks passed.
 """
 import json
+import os
 import subprocess
 import sys
 import urllib.request
@@ -19,8 +20,11 @@ API = "http://localhost:8000"
 CRITICAL_FAILED = []
 
 
+API_KEY = os.getenv("API_KEY", "dev-secret-key")
+
+
 def get(path: str) -> tuple[int, dict]:
-    req = urllib.request.Request(API + path)
+    req = urllib.request.Request(API + path, headers={"X-API-Key": API_KEY})
     with urllib.request.urlopen(req, timeout=10) as resp:
         return resp.status, json.loads(resp.read().decode())
 

@@ -1,5 +1,6 @@
 dagster==1.8.7
 dagster-webserver==1.8.7
 dagster-postgres==0.24.7
+dagster-dbt==0.24.7
 dbt-trino==1.8.1
 trino==0.329.0
