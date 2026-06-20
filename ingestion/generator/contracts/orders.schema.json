@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scp:contract:orders:v1",
+  "title": "OrderEvent",
+  "description": "Order lifecycle event from ERP/e-commerce. Topic: orders. Key: order_id.",
+  "type": "object",
+  "required": ["event_id", "order_id", "customer_id", "sku", "quantity", "unit_price", "order_ts"],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {"type": "string"},
+    "order_id": {"type": "string"},
+    "customer_id": {"type": "string"},
+    "sku": {"type": "string", "pattern": "^SKU-[0-9]{5}$"},
+    "quantity": {"type": "integer", "minimum": 1},
+    "unit_price": {"type": "number", "minimum": 0},
+    "currency": {"type": "string", "enum": ["USD", "EUR", "GBP"]},
+    "status": {"type": "string", "enum": ["created", "picked", "packed", "shipped"]},
+    "region": {"type": "string", "enum": ["NA", "EU", "APAC", "LATAM"]},
+    "order_ts": {"type": "string", "format": "date-time"}
+  }
+}

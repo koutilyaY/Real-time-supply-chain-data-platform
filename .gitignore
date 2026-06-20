@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# dbt
+transformations/dbt/target/
+transformations/dbt/dbt_packages/
+transformations/dbt/logs/
+
+# env / secrets
+.env
+*.local
+
+# data / artifacts
+data/
+mlruns/
+*.duckdb
+*.log
+
+# OS
+.DS_Store
+
+# docker volumes (if bind-mounted locally)
+volumes/
+
+# local agent settings
+.claude/settings.local.json

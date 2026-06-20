@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scp:contract:iot_sensors:v1",
+  "title": "IoTSensorReading",
+  "description": "Telemetry from cold-chain / equipment sensors. Topic: iot.sensors. Key: sensor_id.",
+  "type": "object",
+  "required": ["event_id", "sensor_id", "metric", "value", "reading_ts"],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {"type": "string"},
+    "sensor_id": {"type": "string"},
+    "asset_id": {"type": "string"},
+    "warehouse_id": {"type": "string"},
+    "metric": {"type": "string", "enum": ["temperature", "vibration", "humidity"]},
+    "value": {"type": "number"},
+    "unit": {"type": "string"},
+    "reading_ts": {"type": "string", "format": "date-time"}
+  }
+}

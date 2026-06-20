@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scp:contract:shipments:v1",
+  "title": "ShipmentEvent",
+  "description": "Shipment movement event from TMS. Topic: shipments. Key: shipment_id.",
+  "type": "object",
+  "required": ["event_id", "shipment_id", "order_id", "carrier", "status", "ship_ts"],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {"type": "string"},
+    "shipment_id": {"type": "string"},
+    "order_id": {"type": "string"},
+    "carrier": {"type": "string"},
+    "origin": {"type": "string"},
+    "destination": {"type": "string"},
+    "status": {"type": "string", "enum": ["in_transit", "delivered", "delayed", "customs_hold"]},
+    "ship_ts": {"type": "string", "format": "date-time"},
+    "eta_ts": {"type": "string", "format": "date-time"}
+  }
+}

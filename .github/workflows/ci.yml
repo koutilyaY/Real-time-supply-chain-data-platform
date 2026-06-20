@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose
+        run: docker compose config -q
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint / compile Python
+        run: |
+          python -m pip install --upgrade pip ruff
+          ruff check . || true
+          python -m compileall -q ingestion serving ml rag digital_twin tests orchestration
+
+      - name: Validate JSON data contracts
+        run: |
+          for f in ingestion/generator/contracts/*.json; do
+            python -c "import json,sys; json.load(open('$f'))"
+          done
+
+  dbt-parse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: dbt parse (no warehouse)
+        run: |
+          pip install dbt-trino==1.8.1
+          cd transformations/dbt
+          DBT_PROFILES_DIR=. dbt deps
+          DBT_PROFILES_DIR=. dbt parse || true

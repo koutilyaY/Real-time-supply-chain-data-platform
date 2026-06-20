@@ -1,0 +1,21 @@
+# Column masking / tokenization policy (template).
+# Consumed by the dbt masking macro (transformations/dbt/macros) and/or Trino
+# column-mask rules. Fields not listed are treated as non-sensitive.
+domains:
+  orders:
+    customer_id:
+      classification: pii
+      strategy: hash          # sha256 with per-env salt
+      visible_to: [admin]
+  suppliers:
+    name:
+      classification: confidential
+      strategy: passthrough   # business-needed; restrict by role instead
+  shipments:
+    destination:
+      classification: internal
+      strategy: passthrough
+strategies:
+  hash:    "to_hex(sha256(to_utf8(concat(value, env_salt))))"
+  redact:  "'***'"
+  passthrough: "value"

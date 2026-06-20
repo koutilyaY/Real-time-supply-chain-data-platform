@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: fct_revenue_hourly
+    description: "Hourly gross revenue and order counts by region."
+    columns:
+      - name: region
+        tests: [not_null]
+      - name: revenue_hour
+        tests: [not_null]
+      - name: gross_revenue
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+  - name: agg_inventory_health
+    description: "SKUs below reorder point and total shortfall by warehouse."
+    columns:
+      - name: warehouse_id
+        tests: [not_null]
+      - name: skus_below_reorder
+        tests: [not_null]
+
+  - name: fct_carrier_performance
+    description: "Carrier delay/on-time rates."
+    columns:
+      - name: carrier
+        tests: [not_null, unique]
+      - name: on_time_rate
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+
+  - name: fct_iot_hourly
+    description: "Hourly IoT metric rollup per warehouse + metric."
+    columns:
+      - name: warehouse_id
+        tests: [not_null]
+      - name: metric
+        tests: [not_null]

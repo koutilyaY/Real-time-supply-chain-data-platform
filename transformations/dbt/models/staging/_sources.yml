@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: silver
+    database: iceberg
+    schema: silver
+    description: "Curated streaming outputs written by Flink SQL jobs."
+    tables:
+      - name: orders_revenue_1m
+      - name: inventory_alerts
+      - name: shipment_delays_5m
+      - name: iot_metric_1m
+  - name: bronze
+    database: iceberg
+    schema: bronze
+    description: "Validated raw landing tables written by Flink SQL jobs."
+    tables:
+      - name: orders_raw
+      - name: inventory_raw
+      - name: shipments_raw
+      - name: iot_raw

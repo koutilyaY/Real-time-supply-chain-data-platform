@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scp:contract:inventory:v1",
+  "title": "InventoryEvent",
+  "description": "Inventory position snapshot from WMS. Topic: inventory. Key: warehouse_id|sku.",
+  "type": "object",
+  "required": ["event_id", "warehouse_id", "sku", "on_hand", "inventory_ts"],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {"type": "string"},
+    "warehouse_id": {"type": "string", "pattern": "^WH-[0-9]{2}$"},
+    "sku": {"type": "string", "pattern": "^SKU-[0-9]{5}$"},
+    "on_hand": {"type": "integer", "minimum": 0},
+    "reserved": {"type": "integer", "minimum": 0},
+    "reorder_point": {"type": "integer", "minimum": 0},
+    "region": {"type": "string"},
+    "inventory_ts": {"type": "string", "format": "date-time"}
+  }
+}

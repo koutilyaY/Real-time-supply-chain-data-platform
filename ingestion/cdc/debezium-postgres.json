@@ -1,0 +1,28 @@
+{
+  "name": "erp-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "erp-db",
+    "database.port": "5432",
+    "database.user": "erp",
+    "database.password": "erp",
+    "database.dbname": "erp",
+    "topic.prefix": "erp",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_erp",
+    "publication.autocreate.mode": "filtered",
+    "schema.include.list": "commerce",
+    "table.include.list": "commerce.suppliers,commerce.purchase_orders",
+    "snapshot.mode": "initial",
+    "decimal.handling.mode": "double",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite"
+  }
+}

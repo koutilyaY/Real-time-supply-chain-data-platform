@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scp:contract:suppliers:v1",
+  "title": "SupplierEvent",
+  "description": "Supplier master + performance update from ERP/SRM. Topic: suppliers. Key: supplier_id.",
+  "type": "object",
+  "required": ["event_id", "supplier_id", "name", "updated_ts"],
+  "additionalProperties": true,
+  "properties": {
+    "event_id": {"type": "string"},
+    "supplier_id": {"type": "string", "pattern": "^SUP-[0-9]{3}$"},
+    "name": {"type": "string"},
+    "country": {"type": "string"},
+    "lead_time_days": {"type": "integer", "minimum": 0},
+    "on_time_rate": {"type": "number", "minimum": 0, "maximum": 1},
+    "risk_score": {"type": "number", "minimum": 0},
+    "updated_ts": {"type": "string", "format": "date-time"}
+  }
+}
