@@ -55,6 +55,10 @@ cdc: env ## Start Debezium CDC (erp-db + kafka-connect) and register the connect
 dbt-run: ## Run dbt transformations (needs `pip install dbt-trino` on host)
 	cd transformations/dbt && DBT_PROFILES_DIR=. dbt deps && DBT_PROFILES_DIR=. dbt build
 
+.PHONY: maintain
+maintain: ## Iceberg maintenance: compact + expire snapshots + remove orphans (arg: RETENTION=7d)
+	./scripts/iceberg_maintain.sh $(or $(RETENTION),7d)
+
 .PHONY: demo
 demo: ## End-to-end: up -> lake-init -> flink-jobs (waits between steps)
 	$(MAKE) up

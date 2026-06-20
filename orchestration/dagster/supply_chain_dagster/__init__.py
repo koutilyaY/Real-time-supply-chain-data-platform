@@ -61,7 +61,53 @@ def dq_checks() -> MaterializeResult:
     return MaterializeResult(metadata={"passed": passed, **{k: str(v) for k, v in checks.items()}})
 
 
-daily_job = define_asset_job("daily_refresh", selection="*")
-daily_schedule = ScheduleDefinition(job=daily_job, cron_schedule="0 * * * *")
+MAINTENANCE_TABLES = [
+    "bronze.orders_raw", "bronze.inventory_raw", "bronze.shipments_raw", "bronze.iot_raw",
+    "silver.orders_revenue_1m", "silver.inventory_alerts",
+    "silver.shipment_delays_5m", "silver.iot_metric_1m",
+]
+RETENTION = os.getenv("ICEBERG_RETENTION", "7d")  # prod-safe; streaming writes a file/snapshot per checkpoint
 
-defs = Definitions(assets=[build_marts, dq_checks], schedules=[daily_schedule])
+
+@asset(group_name="maintenance")
+def iceberg_maintenance() -> MaterializeResult:
+    """Compact small files, expire old snapshots, and remove orphan files for
+    every Bronze/Silver table. Keeps the lakehouse from rotting under streaming
+    (one file + one snapshot per Flink checkpoint)."""
+    log = get_dagster_logger()
+    conn = trino.dbapi.connect(
+        host=TRINO_HOST, port=8080, user="dagster", catalog="iceberg",
+        session_properties={
+            "iceberg.expire_snapshots_min_retention": RETENTION,
+            "iceberg.remove_orphan_files_min_retention": RETENTION,
+        },
+    )
+    done, errors = [], {}
+    for t in MAINTENANCE_TABLES:
+        for op in (
+            f"ALTER TABLE iceberg.{t} EXECUTE optimize",
+            f"ALTER TABLE iceberg.{t} EXECUTE expire_snapshots(retention_threshold => '{RETENTION}')",
+            f"ALTER TABLE iceberg.{t} EXECUTE remove_orphan_files(retention_threshold => '{RETENTION}')",
+        ):
+            try:
+                cur = conn.cursor()
+                cur.execute(op)
+                cur.fetchall()
+            except Exception as exc:  # noqa: BLE001 - record, continue (e.g. concurrent write)
+                errors[f"{t}:{op.split('EXECUTE')[1].split('(')[0].strip()}"] = str(exc)[:120]
+        done.append(t)
+    log.info("maintained %d tables; %d errors", len(done), len(errors))
+    return MaterializeResult(metadata={"tables": len(done), "retention": RETENTION,
+                                       "errors": len(errors), **errors})
+
+
+daily_job = define_asset_job("daily_refresh", selection=["build_marts", "dq_checks"])
+daily_schedule = ScheduleDefinition(job=daily_job, cron_schedule="0 * * * *")
+# Iceberg maintenance on its own daily cadence (heavier; off-peak).
+maintenance_job = define_asset_job("iceberg_maintenance_job", selection=["iceberg_maintenance"])
+maintenance_schedule = ScheduleDefinition(job=maintenance_job, cron_schedule="30 3 * * *")
+
+defs = Definitions(
+    assets=[build_marts, dq_checks, iceberg_maintenance],
+    schedules=[daily_schedule, maintenance_schedule],
+)

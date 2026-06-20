@@ -29,6 +29,10 @@ Legend: ✅ implemented & runnable · 🟡 partial/scaffolded with a clear next 
 - **Contract enforcement** — `tests/contracts/validate_contracts.py` verifies clean events conform and malformed events are rejected; wired into CI (`contracts` job) + `make contracts`.
 - **Schema Registry + Avro** — DONE: Apicurio registry (Confluent-compat), generator produces Avro (schemas auto-registered as `<topic>-value`), all 4 Flink sources use `avro-confluent`. Types enforced at the wire; nullable schemas keep the DLQ for business rules. Verified: Bronze/Silver flow on Avro, dbt PASS=33, DLQ intact.
 
+## Tier-2 lakehouse hygiene (added 2026-06-19)
+- **Iceberg maintenance** — DONE: `scripts/iceberg_maintain.sh` + Dagster `iceberg_maintenance` asset (daily 03:30) run `optimize` (compaction), `expire_snapshots`, `remove_orphan_files` over all Bronze/Silver tables. Verified: silver 62→1 files, bronze 344→5 files, snapshots 368→11; data integrity preserved. Prod-safe 7d retention (job lowers per-session only).
+- **Still open (Tier-2):** table partitioning + sort order; Flink HA + savepoints; Kafka RF≥2 + named volume; scheduled `pg_dump` + MinIO versioning backups.
+
 ## Suggested next passes
 1. **Connectors:** stand up Airbyte OSS + a Debezium Postgres source writing to
    the same topics; retire/augment the generator.
