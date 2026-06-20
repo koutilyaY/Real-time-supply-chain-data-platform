@@ -52,8 +52,11 @@ cdc: env ## Start Debezium CDC (erp-db + kafka-connect) and register the connect
 	./scripts/register_debezium.sh
 
 .PHONY: dbt-run
-dbt-run: ## Run dbt transformations (needs `pip install dbt-trino` on host)
-	cd transformations/dbt && DBT_PROFILES_DIR=. dbt deps && DBT_PROFILES_DIR=. dbt build
+dbt-run: ## Build dbt models (Silver views + Gold marts) in a throwaway container
+	docker run --rm --network platform \
+	  -v "$(CURDIR)/transformations/dbt":/dbt -w /dbt \
+	  -e DBT_PROFILES_DIR=/dbt -e TRINO_HOST=trino \
+	  python:3.11-slim bash -lc "pip install -q dbt-trino==1.8.1 && dbt deps && dbt build"
 
 .PHONY: maintain
 maintain: ## Iceberg maintenance: compact + expire snapshots + remove orphans (arg: RETENTION=7d)
@@ -88,8 +91,11 @@ contracts: ## Validate generator events against the JSON data contracts
 	pip install -q -r tests/contracts/requirements.txt && python3 tests/contracts/validate_contracts.py
 
 .PHONY: dq
-dq: ## Run dbt data-quality tests + source freshness (needs dbt-trino)
-	cd transformations/dbt && DBT_PROFILES_DIR=. dbt deps && DBT_PROFILES_DIR=. dbt test && DBT_PROFILES_DIR=. dbt source freshness
+dq: ## Run dbt data-quality tests + source freshness (throwaway container)
+	docker run --rm --network platform \
+	  -v "$(CURDIR)/transformations/dbt":/dbt -w /dbt \
+	  -e DBT_PROFILES_DIR=/dbt -e TRINO_HOST=trino \
+	  python:3.11-slim bash -lc "pip install -q dbt-trino==1.8.1 && dbt deps && dbt test && dbt source freshness"
 
 .PHONY: chaos
 chaos: ## Run chaos experiments (kill broker / taskmanager / minio)
